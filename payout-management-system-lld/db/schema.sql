@@ -1,39 +1,3 @@
-# Low Level Design
-
-This document will contain the LLD for the User Payout Management System.
-
-## Database Schema (ER Description)
-
-### users
-- `id` (PK)
-- `name`
-- `created_at`
-
-### sales
-- `id` (PK)
-- `user_id` (FK -> users)
-- `brand` (enum/string: brand_1, brand_2, brand_3)
-- `earning` (decimal)
-- `status` (enum: pending, approved, rejected)
-- `advance_paid` (decimal, default 0) — tracks whether/how much advance was already paid on THIS sale
-- `advance_paid_at` (nullable timestamp)
-- `reconciled_at` (nullable timestamp)
-- `created_at`
-- `updated_at`
-
-### payout_transactions
-- `id` (PK)
-- `user_id` (FK -> users)
-- `type` (enum: advance, final_settlement, withdrawal)
-- `amount` (decimal, can be negative for adjustments)
-- `status` (enum: pending, completed, failed, cancelled, rejected)
-- `related_sale_id` (nullable FK -> sales, for advance/settlement rows)
-- `created_at`
-- `updated_at`
-
-## SQL Schema
-
-```sql
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -66,4 +30,3 @@ CREATE TABLE IF NOT EXISTS payout_transactions (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (related_sale_id) REFERENCES sales(id)
 );
-```
