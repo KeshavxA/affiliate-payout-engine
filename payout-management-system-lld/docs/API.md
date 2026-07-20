@@ -1,5 +1,9 @@
 # Payout Management API
 
+This document details the REST API endpoints, their request/response JSON schemas, and possible error codes.
+
+---
+
 ## Sales
 
 ### Create a Sale
@@ -31,6 +35,14 @@ Creates a new sale (useful for testing/seeding).
 }
 ```
 
+**Error Responses:**
+- `400 Bad Request`: When `earning` <= 0 or missing required fields.
+```json
+{ "error": "Earning must be greater than 0" }
+```
+
+---
+
 ### List Sales
 `GET /sales?userId=user_123&status=pending`
 Lists all sales, optionally filtered by user ID and/or status.
@@ -47,6 +59,8 @@ Lists all sales, optionally filtered by user ID and/or status.
   }
 ]
 ```
+
+---
 
 ### Reconcile Sale
 `PATCH /sales/:id/reconcile`
@@ -65,6 +79,16 @@ Transitions a pending sale to approved or rejected, adjusting the user's withdra
   "message": "Sale uuid reconciled as approved"
 }
 ```
+
+**Error Responses:**
+- `400 Bad Request`: If status is not 'approved' or 'rejected'.
+- `404 Not Found`: If the sale ID doesn't exist.
+- `409 Conflict`: If the sale is already reconciled or was modified concurrently.
+```json
+{ "error": "Sale uuid is already reconciled (approved)." }
+```
+
+---
 
 ## Payouts
 
@@ -86,6 +110,8 @@ Calculates and pays out the 10% advance for all un-advanced pending sales for a 
 }
 ```
 
+---
+
 ## Withdrawals & Balances
 
 ### Get User Balance
@@ -100,6 +126,8 @@ Retrieves a user's current withdrawable balance and their last withdrawal timest
   "last_withdrawal_at": "2023-10-10T12:00:00.000Z"
 }
 ```
+
+---
 
 ### Request Withdrawal
 `POST /withdrawals`
@@ -120,6 +148,18 @@ Initiates a withdrawal request if the user has sufficient balance and has passed
 }
 ```
 
+**Error Responses:**
+- `400 Bad Request`: If `amount` exceeds the `withdrawable_balance` or is <= 0.
+```json
+{ "error": "Insufficient balance. Available: 0" }
+```
+- `409 Conflict`: If a withdrawal was made within the last 24 hours.
+```json
+{ "error": "You must wait 24 hours between withdrawals." }
+```
+
+---
+
 ### Update Withdrawal Status
 `PATCH /withdrawals/:id/status`
 Updates the outcome of a withdrawal request. If a payout fails and `transactionId` is provided, triggers the recovery service to refund the user.
@@ -138,6 +178,12 @@ Updates the outcome of a withdrawal request. If a payout fails and `transactionI
   "message": "Withdrawal status updated"
 }
 ```
+
+**Error Responses:**
+- `404 Not Found`: If the transaction doesn't exist.
+- `409 Conflict`: If the transaction is already resolved.
+
+---
 
 ## Ledger & Transactions
 
