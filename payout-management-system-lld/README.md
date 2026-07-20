@@ -14,6 +14,9 @@ Ensure you have Node.js 20+ installed.
 ```bash
 # Install all dependencies
 npm install
+
+# Setup environment variables
+cp .env.example .env
 ```
 
 ### 2. Run the Demo
