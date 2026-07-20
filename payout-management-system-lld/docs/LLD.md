@@ -1,183 +1,156 @@
-# Low Level Design
+# Low-Level Design (LLD) - Affiliate Payout Engine
 
-This document will contain the LLD for the User Payout Management System.
+This document details the Low-Level Design of the User Payout Management System. It outlines the schema, entity relationships, domain class structures, flow sequence diagrams, and fundamental design decisions that govern the payout processing pipeline.
 
-## Database Schema (ER Description)
+---
 
-### users
-- `id` (PK)
-- `name`
-- `created_at`
+## 1. Database Schema & Entity Relationships
 
-### sales
-- `id` (PK)
-- `user_id` (FK -> users)
-- `brand` (enum/string: brand_1, brand_2, brand_3)
-- `earning` (decimal)
-- `status` (enum: pending, approved, rejected)
-- `advance_paid` (decimal, default 0) — tracks whether/how much advance was already paid on THIS sale
-- `advance_paid_at` (nullable timestamp)
-- `reconciled_at` (nullable timestamp)
-- `created_at`
-- `updated_at`
+The data model is fundamentally relational, acting as a ledger system.
 
-### payout_transactions
-- `id` (PK)
-- `user_id` (FK -> users)
-- `type` (enum: advance, final_settlement, withdrawal)
-- `amount` (decimal, can be negative for adjustments)
-- `status` (enum: pending, completed, failed, cancelled, rejected)
-- `related_sale_id` (nullable FK -> sales, for advance/settlement rows)
-- `created_at`
-- `updated_at`
+### **Entity Relationship Diagram (ERD)**
 
-### withdrawal_requests
-- `id` (PK)
-- `user_id` (FK -> users)
-- `amount` (decimal)
-- `status` (enum: pending, completed, failed, cancelled, rejected)
-- `requested_at`
-- `settled_at` (nullable)
+```mermaid
+erDiagram
+    users ||--o{ sales : "makes"
+    users ||--o{ payout_transactions : "owns"
+    users ||--o{ withdrawal_requests : "requests"
+    users ||--|| user_balances : "has"
+    
+    sales ||--o{ payout_transactions : "triggers (advance/final)"
+    withdrawal_requests ||--|| payout_transactions : "tracked by"
 
-### user_balances (derived/cached, optional but recommended for O(1) reads)
-- `user_id` (PK, FK -> users)
-- `withdrawable_balance` (decimal)
-- `last_withdrawal_at` (nullable timestamp) — enforces the 24h rule
-- `updated_at`
+    users {
+        string id PK
+        string name
+    }
+    
+    sales {
+        string id PK
+        string user_id FK
+        string brand
+        decimal earning
+        string status "pending|approved|rejected"
+        decimal advance_paid "default 0"
+    }
 
-### Relationships
-- 1 user -> many sales
-- 1 user -> many transactions
-- 1 user -> many withdrawal_requests
-- 1 user -> 1 user_balance
-- 1 sale -> at most one advance transaction
+    payout_transactions {
+        string id PK
+        string user_id FK
+        string type "advance|final_settlement|withdrawal"
+        decimal amount
+        string status "pending|completed|failed|cancelled|rejected"
+        string related_sale_id FK
+    }
 
-### Key Design Decision
-**Advance Tracking**: The `advance_paid` tracking lives on the `sales` row (not just in the transactions table). This ensures that idempotency is a single indexed check (`WHERE status='pending' AND advance_paid=0`), instead of an aggregation over transaction history.
+    withdrawal_requests {
+        string id PK
+        string user_id FK
+        decimal amount
+        string status "pending|completed|failed"
+        string transaction_id FK
+    }
 
-## SQL Schema
-
-```sql
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS sales (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    brand TEXT CHECK (brand IN ('brand_1', 'brand_2', 'brand_3')),
-    earning DECIMAL(10, 2) NOT NULL,
-    status TEXT CHECK (status IN ('pending', 'approved', 'rejected')),
-    advance_paid DECIMAL(10, 2) DEFAULT 0,
-    advance_paid_at DATETIME,
-    reconciled_at DATETIME,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS payout_transactions (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    type TEXT CHECK (type IN ('advance', 'final_settlement', 'withdrawal')),
-    amount DECIMAL(10, 2) NOT NULL,
-    status TEXT CHECK (status IN ('pending', 'completed', 'failed', 'cancelled', 'rejected')),
-    related_sale_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (related_sale_id) REFERENCES sales(id)
-);
-
-CREATE TABLE IF NOT EXISTS withdrawal_requests (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
-    status TEXT CHECK (status IN ('pending', 'completed', 'failed', 'cancelled', 'rejected')),
-    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    settled_at DATETIME,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS user_balances (
-    user_id TEXT PRIMARY KEY,
-    withdrawable_balance DECIMAL(10, 2) DEFAULT 0,
-    last_withdrawal_at DATETIME,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-);
+    user_balances {
+        string user_id PK, FK
+        decimal withdrawable_balance
+        timestamp last_withdrawal_at
+    }
 ```
 
-## Class / Module Design
+---
 
-### Entities
+## 2. Class Responsibilities
 
-- `Sale`: Represents an affiliate sale earning.
-- `PayoutTransaction`: Represents a payout movement (advance, settlement, withdrawal).
-- `WithdrawalRequest`: Represents a user's request to withdraw their withdrawable balance.
-- `UserBalance`: Represents the derived/cached balance for a user.
+The system is structured using a standard 3-tier architecture separating the REST API (routes), Business Logic (Services), and Data Access (Repositories).
 
-### Repositories
+### **Repositories (Persistence Layer)**
+- `SaleRepository`: Handles CRUD for `sales`. Contains business-specific queries like `findPendingUnadvanced(userId)` to fetch pending sales where `advance_paid = 0`.
+- `UserBalanceRepository`: Manages the atomic balance table. Includes safe upsert (`createOrUpdate`) operations to prevent race conditions during first-time advances.
+- `PayoutTransactionRepository`: Append-only (mostly) ledger of all financial movements for an affiliate.
+- `WithdrawalRepository`: Tracks specific withdrawal requests and their metadata.
 
-- `SaleRepository`
-  - Responsibilities: Manage `sales` table (CRUD) and specific queries for pending advances.
-  - Methods: `create()`, `findById()`, `update()`, `delete()`, `findPendingUnadvanced(userId)`
+### **Services (Business Logic Layer)**
+- `AdvancePayoutService`: Computes the 10% advance for unadvanced pending sales. Credits `user_balances.withdrawable_balance` and records `advance` payout_transactions. Guaranteed to be idempotent.
+- `ReconciliationService`: Transitions a sale from `pending` -> `approved|rejected`. Computes final adjustment (`earning - advance_paid` or `-advance_paid`). Adjusts `withdrawable_balance` and records a `final_settlement` transaction.
+- `WithdrawalService`: Guards against insufficient balances and the 24-hour cooldown constraint. Deducts from `withdrawable_balance`, updates `last_withdrawal_at`, and stages a `withdrawal` transaction.
+- `FailedPayoutRecoveryService`: Triggers when external payment gateways reject a payout. Refunds the `withdrawable_balance` and resets `last_withdrawal_at` to unblock the user immediately.
 
-- `PayoutTransactionRepository`
-  - Responsibilities: Manage `payout_transactions` table.
-  - Methods: `create()`, `findById()`, `update()`
+---
 
-- `WithdrawalRepository`
-  - Responsibilities: Manage `withdrawal_requests` table.
-  - Methods: `create()`, `findById()`, `update()`
+## 3. Sequence Diagrams
 
-- `UserBalanceRepository`
-  - Responsibilities: Manage `user_balances` table.
-  - Methods: `createOrUpdate()`, `findByUserId()`
+### **Advance Payout Flow**
+This flow represents the scheduled or triggered job that grants the 10% advance.
 
-### Services
+```mermaid
+sequenceDiagram
+    participant API as Trigger/API
+    participant Svc as AdvancePayoutService
+    participant DB as SQLite DB
 
-- `AdvancePayoutService`
-  - Responsibilities: Process 10% advances on pending sales.
-  - Methods: `runAdvancePayout(userId)`
-  - Design Details: Uses an SQLite IMMEDIATE transaction and conditional `UPDATE ... WHERE advance_paid = 0` to guarantee idempotency and avoid race conditions under concurrent executions. Credits `user_balances` utilizing an `ON CONFLICT DO UPDATE` upsert.
-
-- `ReconciliationService`
-  - Responsibilities: Transition sales from pending to approved/rejected and compute final settlements.
-  - Methods: `reconcileSale(saleId, newStatus)`
-  - Design Details: Idempotent operation utilizing `WHERE status = 'pending'` for conditionality, rejecting already reconciled sales. Calculates adjustments correctly (crediting the remainder for approved, or debiting/clawing back advances for rejected) and updates the `user_balances`.
-
-- `WithdrawalService`
-  - Responsibilities: Handle user requests to withdraw their accumulated funds.
-  - Methods: `requestWithdrawal(userId, amount)`
-  - Design Details: Validates that `withdrawable_balance >= amount` and ensures the 24-hour cooldown constraint. Inserts records into both `withdrawal_requests` and `payout_transactions`, debits the user balance, and updates the `last_withdrawal_at` timestamp natively inside a single transaction. Throws typed `InsufficientBalanceError` and `WithdrawalCooldownError`.
-
-- `FailedPayoutRecoveryService`
-  - Responsibilities: Resolve pending payout transactions to their final state and refund balances if the payout failed.
-  - Methods: `markPayoutOutcome(transactionId, outcome)`
-  - Design Details: **Trade-off on `last_withdrawal_at`**: When a payout fails (e.g. `rejected` or `cancelled`), the amount is credited back to `user_balances`, but the `last_withdrawal_at` is *not* reset. **Stance**: We choose not to penalize the user for a failure that might be outside of their control (such as a banking error). Retaining the timestamp allows the user to immediately attempt a withdrawal again, prioritizing UX over strict calendar-blocking of failed attempts.
-
-### Class Diagram (Text Form)
-
-```text
-+-----------------------+       +-------------------------------+
-|       Entities        |       |         Repositories          |
-+-----------------------+       +-------------------------------+
-| - Sale                | <---- | - SaleRepository              |
-| - PayoutTransaction   | <---- | - PayoutTransactionRepository |
-| - WithdrawalRequest   | <---- | - WithdrawalRepository        |
-| - UserBalance         | <---- | - UserBalanceRepository       |
-+-----------------------+       +-------------------------------+
-                                               ^
-                                               |
-                                +-------------------------------+
-                                |           Services            |
-                                +-------------------------------+
-                                | - AdvancePayoutService        |
-                                | - ReconciliationService       |
-                                | - WithdrawalService           |
-                                | - FailedPayoutRecoveryService |
-                                +-------------------------------+
+    API->>Svc: runAdvancePayout(userId)
+    Svc->>DB: BEGIN IMMEDIATE TRANSACTION
+    Svc->>DB: SELECT * FROM sales WHERE user_id = ? AND status='pending' AND advance_paid=0
+    DB-->>Svc: Array of unadvanced Sales
+    loop For each Sale
+        Svc->>Svc: calculate 10% (round to 2 decimals)
+        Svc->>DB: INSERT payout_transaction (type=advance)
+        Svc->>DB: UPDATE sales SET advance_paid = X WHERE id = ? AND advance_paid = 0
+        Svc->>DB: UPDATE user_balances SET withdrawable_balance += X
+    end
+    Svc->>DB: COMMIT
+    Svc-->>API: Success
 ```
+
+### **Reconciliation Flow**
+This flow occurs when the brand validates a tracked sale as either legitimate (approved) or fraudulent/returned (rejected).
+
+```mermaid
+sequenceDiagram
+    participant API as Brand Webhook/API
+    participant Svc as ReconciliationService
+    participant DB as SQLite DB
+
+    API->>Svc: reconcileSale(saleId, 'approved' | 'rejected')
+    Svc->>DB: BEGIN IMMEDIATE TRANSACTION
+    Svc->>DB: SELECT * FROM sales WHERE id = ? AND status='pending'
+    DB-->>Svc: Sale Record (with advance_paid tracked)
+    
+    alt Status = 'approved'
+        Svc->>Svc: adjust = earning - advance_paid
+    else Status = 'rejected'
+        Svc->>Svc: adjust = -advance_paid (Clawback)
+    end
+
+    Svc->>DB: UPDATE sales SET status = newStatus WHERE id = ? AND status='pending'
+    Svc->>DB: INSERT payout_transaction (type=final_settlement, amount=adjust)
+    Svc->>DB: UPDATE user_balances SET withdrawable_balance += adjust
+    Svc->>DB: COMMIT
+    Svc-->>API: Success
+```
+
+---
+
+## 4. Key Design Decisions & Trade-offs
+
+### **1. Why SQLite?**
+SQLite was chosen for this localized LLD assignment due to its zero-configuration footprint and phenomenal support for standard SQL transactions. By using `BEGIN IMMEDIATE TRANSACTION`, SQLite enforces sequential writes, safely guarding against concurrency bugs (race conditions) without complex distributed locking mechanisms like Redis.
+
+### **2. Idempotency via Row Flag vs. Transaction Aggregation**
+To enforce idempotency for advance payouts, we track `advance_paid` directly on the `sales` row rather than scanning the entire `payout_transactions` table to sum previous advances.
+- **Trade-off:** Denormalizes state slightly.
+- **Benefit:** Massive performance gain. `SELECT * FROM sales WHERE advance_paid = 0` requires a simple index, whereas aggregating transaction history requires a full table scan or expensive grouping, which would bottleneck the scheduled job engine as the ledger grows indefinitely.
+
+### **3. Derived Balance Table vs. Computing on Read**
+Instead of calculating the user's available balance by dynamically `SUM()`ing their entire transaction ledger on every API request, we maintain a strictly synchronized `user_balances` table.
+- **Trade-off:** Requires rigorous transactional boundaries to guarantee the `user_balances` table never falls out of sync with `payout_transactions`. 
+- **Benefit:** `O(1)` constant time complexity for balance lookups and withdrawal validation. This ensures the `/withdrawals` and `/balance` endpoints remain ultra-fast regardless of how many thousands of historical transactions an affiliate generates.
+
+### **4. Rounding Strategy**
+We utilize standard JavaScript `Math.round(amount * 100) / 100` rounding (2 decimals, nearest cent). This ensures floating point arithmetic doesn't result in infinitesimal imbalances (e.g., `0.30000000000000004`). In a strict production system, integer-based micro-cents (storing `33` instead of `0.33`) would be utilized for absolute precision.
+
+### **5. Cooldown Reset on Failure**
+Users are restricted to 1 withdrawal per 24 hours to mitigate external payout fee bleeding. However, if a payout request fails asynchronously (e.g., rejected by bank), the `FailedPayoutRecoveryService` explicitly resets `last_withdrawal_at = NULL` in the DB.
+- **Trade-off:** Minor code complexity for handling failure edges.
+- **Benefit:** Phenomenal UX. We intentionally choose **not to penalize the user** for infrastructural or banking failures outside their control, allowing them to re-attempt the withdrawal immediately upon refund.
