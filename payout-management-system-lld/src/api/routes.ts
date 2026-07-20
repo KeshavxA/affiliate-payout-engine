@@ -9,6 +9,11 @@ import { AdvancePayoutService } from '../services/AdvancePayoutService.js';
 import { ReconciliationService } from '../services/ReconciliationService.js';
 import { WithdrawalService } from '../services/WithdrawalService.js';
 import { FailedPayoutRecoveryService } from '../services/FailedPayoutRecoveryService.js';
+import { NotFoundError } from '../errors/NotFoundError.js';
+import { ConflictError } from '../errors/ConflictError.js';
+import { ValidationError } from '../errors/ValidationError.js';
+import { InsufficientBalanceError } from '../errors/InsufficientBalanceError.js';
+import { WithdrawalCooldownError } from '../errors/WithdrawalCooldownError.js';
 
 export const router = Router();
 
@@ -28,6 +33,13 @@ const asyncWrap = (fn: any) => (req: any, res: any, next: any) => Promise.resolv
 // POST /sales
 router.post('/sales', asyncWrap(async (req: any, res: any) => {
     const { userId, brand, earning } = req.body;
+    if (!userId || !brand || earning == null) {
+        throw new ValidationError("Missing required fields: userId, brand, or earning");
+    }
+    if (Number(earning) <= 0) {
+        throw new ValidationError("Earning must be greater than 0");
+    }
+    
     const sale = {
         id: randomUUID(),
         user_id: userId,
@@ -55,7 +67,7 @@ router.get('/sales', asyncWrap(async (req: any, res: any) => {
 router.patch('/sales/:id/reconcile', asyncWrap(async (req: any, res: any) => {
     const { status } = req.body;
     if (status !== 'approved' && status !== 'rejected') {
-        return res.status(400).json({ error: 'Status must be approved or rejected' });
+        throw new ValidationError('Status must be approved or rejected');
     }
     reconciliationService.reconcileSale(req.params.id, status);
     res.json({ message: `Sale ${req.params.id} reconciled as ${status}` });
@@ -80,6 +92,9 @@ router.get('/users/:id/balance', asyncWrap(async (req: any, res: any) => {
 // POST /withdrawals
 router.post('/withdrawals', asyncWrap(async (req: any, res: any) => {
     const { userId, amount } = req.body;
+    if (!userId || amount == null || Number(amount) <= 0) {
+        throw new ValidationError("Missing or invalid fields: userId, amount must be > 0");
+    }
     withdrawalService.requestWithdrawal(userId, Number(amount));
     res.status(201).json({ message: 'Withdrawal requested successfully' });
 }));
@@ -107,5 +122,15 @@ router.get('/users/:id/transactions', asyncWrap(async (req: any, res: any) => {
 
 // Generic error handler
 router.use((err: any, req: any, res: any, next: any) => {
-    res.status(400).json({ error: err.message });
+    if (err instanceof ValidationError || err instanceof InsufficientBalanceError) {
+        return res.status(400).json({ error: err.message });
+    }
+    if (err instanceof NotFoundError) {
+        return res.status(404).json({ error: err.message });
+    }
+    if (err instanceof ConflictError || err instanceof WithdrawalCooldownError) {
+        return res.status(409).json({ error: err.message });
+    }
+    // Fallback for unexpected errors
+    res.status(500).json({ error: err.message });
 });

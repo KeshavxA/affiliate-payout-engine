@@ -1,4 +1,6 @@
 import type { Database } from 'better-sqlite3';
+import { NotFoundError } from '../errors/NotFoundError.js';
+import { ConflictError } from '../errors/ConflictError.js';
 
 export class FailedPayoutRecoveryService {
     constructor(private db: Database) {}
@@ -11,11 +13,11 @@ export class FailedPayoutRecoveryService {
             const tx = txStmt.get(transactionId) as { id: string; user_id: string; type: string; amount: number; status: string } | undefined;
 
             if (!tx) {
-                throw new Error(`Transaction ${transactionId} not found.`);
+                throw new NotFoundError(`Transaction ${transactionId} not found.`);
             }
 
             if (tx.status !== 'pending') {
-                throw new Error(`Transaction ${transactionId} is already resolved with status '${tx.status}'.`);
+                throw new ConflictError(`Transaction ${transactionId} is already resolved with status '${tx.status}'.`);
             }
 
             // Update transaction status
@@ -27,7 +29,7 @@ export class FailedPayoutRecoveryService {
             const updateResult = updateTxStmt.run(outcome, transactionId);
 
             if (updateResult.changes === 0) {
-                throw new Error(`Transaction ${transactionId} was modified concurrently.`);
+                throw new ConflictError(`Transaction ${transactionId} was modified concurrently.`);
             }
 
             // Refund logic for failed withdrawals
@@ -35,10 +37,12 @@ export class FailedPayoutRecoveryService {
                 const updateBalanceStmt = this.db.prepare(`
                     UPDATE user_balances 
                     SET withdrawable_balance = withdrawable_balance + ?,
+                        last_withdrawal_at = NULL,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = ?
                 `);
-                // Note: We do NOT reset last_withdrawal_at here so the user isn't unfairly blocked from a retry.
+                // Note: We reset last_withdrawal_at to NULL so the user isn't unfairly blocked from a retry.
+                // This satisfies the requirement to allow immediate re-attempt.
                 updateBalanceStmt.run(tx.amount, tx.user_id);
             }
         });

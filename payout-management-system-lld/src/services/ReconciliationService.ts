@@ -1,5 +1,7 @@
 import type { Database } from 'better-sqlite3';
 import { randomUUID } from 'crypto';
+import { NotFoundError } from '../errors/NotFoundError.js';
+import { ConflictError } from '../errors/ConflictError.js';
 
 export class ReconciliationService {
     constructor(private db: Database) {}
@@ -13,7 +15,15 @@ export class ReconciliationService {
             const sale = saleStmt.get(saleId) as { id: string; user_id: string; earning: number; advance_paid: number; status: string } | undefined;
 
             if (!sale) {
-                throw new Error(`Sale ${saleId} not found or already reconciled.`);
+                // Sale might exist but not be pending, or not exist at all.
+                // For simplicity, we treat "already reconciled" as a Conflict and "not found" as NotFound.
+                // To do this cleanly, we can check if it exists at all.
+                const exists = this.db.prepare(`SELECT status FROM sales WHERE id = ?`).get(saleId) as { status: string } | undefined;
+                if (!exists) {
+                    throw new NotFoundError(`Sale ${saleId} not found.`);
+                } else {
+                    throw new ConflictError(`Sale ${saleId} is already reconciled (${exists.status}).`);
+                }
             }
 
             // 2. Compute final adjustment
@@ -39,7 +49,7 @@ export class ReconciliationService {
 
             // Safety check against concurrent modifications
             if (updateResult.changes === 0) {
-                throw new Error(`Sale ${saleId} was modified concurrently and is no longer pending.`);
+                throw new ConflictError(`Sale ${saleId} was modified concurrently and is no longer pending.`);
             }
 
             // 4. Record payout_transactions row
