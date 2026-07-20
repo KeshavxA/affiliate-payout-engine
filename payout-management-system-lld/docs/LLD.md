@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS user_balances (
   - Responsibilities: Manage `user_balances` table.
   - Methods: `createOrUpdate()`, `findByUserId()`
 
+### Services
+
+- `AdvancePayoutService`
+  - Responsibilities: Process 10% advances on pending sales.
+  - Methods: `runAdvancePayout(userId)`
+  - Design Details: Uses an SQLite IMMEDIATE transaction and conditional `UPDATE ... WHERE advance_paid = 0` to guarantee idempotency and avoid race conditions under concurrent executions. Credits `user_balances` utilizing an `ON CONFLICT DO UPDATE` upsert.
+
 ### Class Diagram (Text Form)
 
 ```text
@@ -148,4 +155,11 @@ CREATE TABLE IF NOT EXISTS user_balances (
 | - WithdrawalRequest   | <---- | - WithdrawalRepository        |
 | - UserBalance         | <---- | - UserBalanceRepository       |
 +-----------------------+       +-------------------------------+
+                                               ^
+                                               |
+                                +-------------------------------+
+                                |           Services            |
+                                +-------------------------------+
+                                | - AdvancePayoutService        |
+                                +-------------------------------+
 ```
