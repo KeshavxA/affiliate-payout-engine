@@ -144,6 +144,11 @@ CREATE TABLE IF NOT EXISTS user_balances (
   - Methods: `runAdvancePayout(userId)`
   - Design Details: Uses an SQLite IMMEDIATE transaction and conditional `UPDATE ... WHERE advance_paid = 0` to guarantee idempotency and avoid race conditions under concurrent executions. Credits `user_balances` utilizing an `ON CONFLICT DO UPDATE` upsert.
 
+- `ReconciliationService`
+  - Responsibilities: Transition sales from pending to approved/rejected and compute final settlements.
+  - Methods: `reconcileSale(saleId, newStatus)`
+  - Design Details: Idempotent operation utilizing `WHERE status = 'pending'` for conditionality, rejecting already reconciled sales. Calculates adjustments correctly (crediting the remainder for approved, or debiting/clawing back advances for rejected) and updates the `user_balances`.
+
 ### Class Diagram (Text Form)
 
 ```text
@@ -161,5 +166,6 @@ CREATE TABLE IF NOT EXISTS user_balances (
                                 |           Services            |
                                 +-------------------------------+
                                 | - AdvancePayoutService        |
+                                | - ReconciliationService       |
                                 +-------------------------------+
 ```
