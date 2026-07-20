@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS user_balances (
   - Methods: `reconcileSale(saleId, newStatus)`
   - Design Details: Idempotent operation utilizing `WHERE status = 'pending'` for conditionality, rejecting already reconciled sales. Calculates adjustments correctly (crediting the remainder for approved, or debiting/clawing back advances for rejected) and updates the `user_balances`.
 
+- `WithdrawalService`
+  - Responsibilities: Handle user requests to withdraw their accumulated funds.
+  - Methods: `requestWithdrawal(userId, amount)`
+  - Design Details: Validates that `withdrawable_balance >= amount` and ensures the 24-hour cooldown constraint. Inserts records into both `withdrawal_requests` and `payout_transactions`, debits the user balance, and updates the `last_withdrawal_at` timestamp natively inside a single transaction. Throws typed `InsufficientBalanceError` and `WithdrawalCooldownError`.
+
+- `FailedPayoutRecoveryService`
+  - Responsibilities: Resolve pending payout transactions to their final state and refund balances if the payout failed.
+  - Methods: `markPayoutOutcome(transactionId, outcome)`
+  - Design Details: **Trade-off on `last_withdrawal_at`**: When a payout fails (e.g. `rejected` or `cancelled`), the amount is credited back to `user_balances`, but the `last_withdrawal_at` is *not* reset. **Stance**: We choose not to penalize the user for a failure that might be outside of their control (such as a banking error). Retaining the timestamp allows the user to immediately attempt a withdrawal again, prioritizing UX over strict calendar-blocking of failed attempts.
+
 ### Class Diagram (Text Form)
 
 ```text
@@ -167,5 +177,7 @@ CREATE TABLE IF NOT EXISTS user_balances (
                                 +-------------------------------+
                                 | - AdvancePayoutService        |
                                 | - ReconciliationService       |
+                                | - WithdrawalService           |
+                                | - FailedPayoutRecoveryService |
                                 +-------------------------------+
 ```
