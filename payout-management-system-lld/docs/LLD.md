@@ -31,6 +31,30 @@ This document will contain the LLD for the User Payout Management System.
 - `created_at`
 - `updated_at`
 
+### withdrawal_requests
+- `id` (PK)
+- `user_id` (FK -> users)
+- `amount` (decimal)
+- `status` (enum: pending, completed, failed, cancelled, rejected)
+- `requested_at`
+- `settled_at` (nullable)
+
+### user_balances (derived/cached, optional but recommended for O(1) reads)
+- `user_id` (PK, FK -> users)
+- `withdrawable_balance` (decimal)
+- `last_withdrawal_at` (nullable timestamp) — enforces the 24h rule
+- `updated_at`
+
+### Relationships
+- 1 user -> many sales
+- 1 user -> many transactions
+- 1 user -> many withdrawal_requests
+- 1 user -> 1 user_balance
+- 1 sale -> at most one advance transaction
+
+### Key Design Decision
+**Advance Tracking**: The `advance_paid` tracking lives on the `sales` row (not just in the transactions table). This ensures that idempotency is a single indexed check (`WHERE status='pending' AND advance_paid=0`), instead of an aggregation over transaction history.
+
 ## SQL Schema
 
 ```sql
@@ -65,5 +89,23 @@ CREATE TABLE IF NOT EXISTS payout_transactions (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (related_sale_id) REFERENCES sales(id)
+);
+
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'completed', 'failed', 'cancelled', 'rejected')),
+    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    settled_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS user_balances (
+    user_id TEXT PRIMARY KEY,
+    withdrawable_balance DECIMAL(10, 2) DEFAULT 0,
+    last_withdrawal_at DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```

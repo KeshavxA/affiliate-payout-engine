@@ -30,3 +30,21 @@ CREATE TABLE IF NOT EXISTS payout_transactions (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (related_sale_id) REFERENCES sales(id)
 );
+
+CREATE TABLE IF NOT EXISTS withdrawal_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'completed', 'failed', 'cancelled', 'rejected')),
+    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    settled_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS user_balances (
+    user_id TEXT PRIMARY KEY,
+    withdrawable_balance DECIMAL(10, 2) DEFAULT 0,
+    last_withdrawal_at DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
