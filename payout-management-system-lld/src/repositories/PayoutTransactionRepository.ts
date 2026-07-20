@@ -4,16 +4,7 @@ import type { PayoutTransaction } from '../entities/PayoutTransaction.js';
 export class PayoutTransactionRepository {
     constructor(private db: Database) {}
 
-    create(transaction: PayoutTransaction): void {
-        // TODO: Implement insert
-    }
-
-    findById(id: string): PayoutTransaction | undefined {
-        // TODO: Implement select by id
-        return undefined;
-    }
-
-    update(id: string, updates: Partial<PayoutTransaction>): void {
-        // TODO: Implement update
+    findByUserId(userId: string): PayoutTransaction[] {
+        return this.db.prepare(`SELECT * FROM payout_transactions WHERE user_id = ? ORDER BY created_at DESC`).all(userId) as PayoutTransaction[];
     }
 }
