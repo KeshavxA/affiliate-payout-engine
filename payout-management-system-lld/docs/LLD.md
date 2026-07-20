@@ -109,3 +109,43 @@ CREATE TABLE IF NOT EXISTS user_balances (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 ```
+
+## Class / Module Design
+
+### Entities
+
+- `Sale`: Represents an affiliate sale earning.
+- `PayoutTransaction`: Represents a payout movement (advance, settlement, withdrawal).
+- `WithdrawalRequest`: Represents a user's request to withdraw their withdrawable balance.
+- `UserBalance`: Represents the derived/cached balance for a user.
+
+### Repositories
+
+- `SaleRepository`
+  - Responsibilities: Manage `sales` table (CRUD) and specific queries for pending advances.
+  - Methods: `create()`, `findById()`, `update()`, `delete()`, `findPendingUnadvanced(userId)`
+
+- `PayoutTransactionRepository`
+  - Responsibilities: Manage `payout_transactions` table.
+  - Methods: `create()`, `findById()`, `update()`
+
+- `WithdrawalRepository`
+  - Responsibilities: Manage `withdrawal_requests` table.
+  - Methods: `create()`, `findById()`, `update()`
+
+- `UserBalanceRepository`
+  - Responsibilities: Manage `user_balances` table.
+  - Methods: `createOrUpdate()`, `findByUserId()`
+
+### Class Diagram (Text Form)
+
+```text
++-----------------------+       +-------------------------------+
+|       Entities        |       |         Repositories          |
++-----------------------+       +-------------------------------+
+| - Sale                | <---- | - SaleRepository              |
+| - PayoutTransaction   | <---- | - PayoutTransactionRepository |
+| - WithdrawalRequest   | <---- | - WithdrawalRepository        |
+| - UserBalance         | <---- | - UserBalanceRepository       |
++-----------------------+       +-------------------------------+
+```
