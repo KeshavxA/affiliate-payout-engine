@@ -5,6 +5,9 @@ import { join } from 'path';
 
 export const db: Database = new DatabaseConstructor(process.env.DATABASE_URL || './payouts.db');
 
+/**
+ * Initializes the database schema using the definitions in db/schema.sql.
+ */
 export function initDb() {
     const schemaSql = readFileSync(join(process.cwd(), 'db', 'schema.sql'), 'utf-8');
     db.exec(schemaSql);
