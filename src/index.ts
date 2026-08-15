@@ -10,7 +10,7 @@ initDb();
 app.use(router);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 if (process.env.NODE_ENV !== 'test') {
