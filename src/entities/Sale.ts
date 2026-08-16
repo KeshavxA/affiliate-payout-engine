@@ -1,3 +1,6 @@
+/**
+ * Represents a sale tracked for an affiliate user.
+ */
 export interface Sale {
     id: string;
     user_id: string;
