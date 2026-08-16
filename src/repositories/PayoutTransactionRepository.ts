@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import type { PayoutTransaction } from '../entities/PayoutTransaction.js';
 
+/**
+ * Repository for accessing PayoutTransaction entities.
+ */
 export class PayoutTransactionRepository {
     constructor(private db: Database) {}
 
