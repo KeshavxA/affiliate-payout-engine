@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import type { UserBalance } from '../entities/UserBalance.js';
 
+/**
+ * Repository for accessing user balances.
+ */
 export class UserBalanceRepository {
     constructor(private db: Database) {}
 
