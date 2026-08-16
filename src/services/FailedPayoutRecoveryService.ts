@@ -2,6 +2,9 @@ import type { Database } from 'better-sqlite3';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { ConflictError } from '../errors/ConflictError.js';
 
+/**
+ * Service to manage the recovery of failed payouts.
+ */
 export class FailedPayoutRecoveryService {
     constructor(private db: Database) {}
 
