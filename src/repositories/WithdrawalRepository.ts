@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import type { WithdrawalRequest } from '../entities/WithdrawalRequest.js';
 
+/**
+ * Repository for managing WithdrawalRequest entities.
+ */
 export class WithdrawalRepository {
     constructor(private db: Database) {}
 
