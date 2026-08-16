@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import { randomUUID } from 'crypto';
 
+/**
+ * Service to manage calculation and distribution of advance payouts.
+ */
 export class AdvancePayoutService {
     constructor(private db: Database) {}
 
