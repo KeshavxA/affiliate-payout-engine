@@ -3,6 +3,9 @@ import { randomUUID } from 'crypto';
 import { NotFoundError } from '../errors/NotFoundError.js';
 import { ConflictError } from '../errors/ConflictError.js';
 
+/**
+ * Service to manage reconciliation of sales (approving or rejecting).
+ */
 export class ReconciliationService {
     constructor(private db: Database) {}
 
