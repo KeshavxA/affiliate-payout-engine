@@ -3,6 +3,9 @@ import { randomUUID } from 'crypto';
 import { InsufficientBalanceError } from '../errors/InsufficientBalanceError.js';
 import { WithdrawalCooldownError } from '../errors/WithdrawalCooldownError.js';
 
+/**
+ * Service to manage the requesting of withdrawals.
+ */
 export class WithdrawalService {
     constructor(private db: Database) {}
 
