@@ -1,3 +1,6 @@
+/**
+ * Represents a request made by a user to withdraw funds.
+ */
 export interface WithdrawalRequest {
     id: string;
     user_id: string;
