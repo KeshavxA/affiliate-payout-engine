@@ -1,6 +1,9 @@
 import type { Database } from 'better-sqlite3';
 import type { Sale } from '../entities/Sale.js';
 
+/**
+ * Repository for managing Sale entities in the database.
+ */
 export class SaleRepository {
     constructor(private db: Database) {}
 
