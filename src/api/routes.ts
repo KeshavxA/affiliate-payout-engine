@@ -137,7 +137,10 @@ router.patch('/withdrawals/:id/status', asyncWrap(async (req: any, res: any) => 
     res.json({ message: 'Withdrawal status updated' });
 }));
 
-// GET /users/:id/transactions
+/**
+ * GET /users/:id/transactions
+ * Fetch all payout transactions for a given user.
+ */
 router.get('/users/:id/transactions', asyncWrap(async (req: any, res: any) => {
     const txs = txRepo.findByUserId(req.params.id);
     res.json(txs);
