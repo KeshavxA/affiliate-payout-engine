@@ -1,3 +1,6 @@
+/**
+ * Represents the withdrawable balance of a user.
+ */
 export interface UserBalance {
     user_id: string;
     withdrawable_balance: number;
