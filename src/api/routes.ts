@@ -32,7 +32,10 @@ const recoveryService = new FailedPayoutRecoveryService(db);
  */
 const asyncWrap = (fn: any) => (req: any, res: any, next: any) => Promise.resolve(fn(req, res, next)).catch(next);
 
-// POST /sales
+/**
+ * POST /sales
+ * Create a new sale for a user.
+ */
 router.post('/sales', asyncWrap(async (req: any, res: any) => {
     const { userId, brand, earning } = req.body;
     if (!userId || !brand || earning == null) {
