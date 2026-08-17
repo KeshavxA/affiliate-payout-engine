@@ -94,7 +94,10 @@ router.post('/payouts/advance/run', asyncWrap(async (req: any, res: any) => {
     res.json({ message: 'Advance payout processed successfully' });
 }));
 
-// GET /users/:id/balance
+/**
+ * GET /users/:id/balance
+ * Fetch the withdrawable balance and last withdrawal time for a given user.
+ */
 router.get('/users/:id/balance', asyncWrap(async (req: any, res: any) => {
     const balance = balanceRepo.findByUserId(req.params.id);
     if (!balance) {
