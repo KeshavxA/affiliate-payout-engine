@@ -1,3 +1,6 @@
+/**
+ * Represents a transaction that changes the user's balance.
+ */
 export interface PayoutTransaction {
     id: string;
     user_id: string;
