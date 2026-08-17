@@ -106,7 +106,10 @@ router.get('/users/:id/balance', asyncWrap(async (req: any, res: any) => {
     res.json(balance);
 }));
 
-// POST /withdrawals
+/**
+ * POST /withdrawals
+ * Request a withdrawal from the user's available balance.
+ */
 router.post('/withdrawals', asyncWrap(async (req: any, res: any) => {
     const { userId, amount } = req.body;
     if (!userId || amount == null || Number(amount) <= 0) {
