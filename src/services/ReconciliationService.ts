@@ -9,6 +9,9 @@ import { ConflictError } from '../errors/ConflictError.js';
 export class ReconciliationService {
     constructor(private db: Database) {}
 
+    /**
+     * Reconciles a pending sale by approving or rejecting it and adjusting balances accordingly.
+     */
     reconcileSale(saleId: string, newStatus: 'approved' | 'rejected'): void {
         const runTransaction = this.db.transaction(() => {
             // 1. Fetch sale ensuring it is still 'pending'
