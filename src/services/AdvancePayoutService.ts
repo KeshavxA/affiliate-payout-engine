@@ -7,6 +7,9 @@ import { randomUUID } from 'crypto';
 export class AdvancePayoutService {
     constructor(private db: Database) {}
 
+    /**
+     * Calculates and distributes advance payouts for all eligible pending sales of a user.
+     */
     runAdvancePayout(userId: string): void {
         const runTransaction = this.db.transaction(() => {
             // 1. Find all pending sales for user where advance_paid = 0
