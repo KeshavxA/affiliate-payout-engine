@@ -2,10 +2,10 @@
  * Represents a request made by a user to withdraw funds.
  */
 export interface WithdrawalRequest {
-    id: string;
-    user_id: string;
-    amount: number;
-    status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'rejected';
-    requested_at: Date;
-    settled_at: Date | null;
+    readonly id: string;
+    readonly user_id: string;
+    readonly amount: number;
+    readonly status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'rejected';
+    readonly requested_at: Date;
+    readonly settled_at: Date | null;
 }
