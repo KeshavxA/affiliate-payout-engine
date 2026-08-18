@@ -8,6 +8,9 @@ import { ConflictError } from '../errors/ConflictError.js';
 export class FailedPayoutRecoveryService {
     constructor(private db: Database) {}
 
+    /**
+     * Marks a payout transaction with its final outcome and handles any necessary refunds.
+     */
     markPayoutOutcome(transactionId: string, outcome: 'cancelled' | 'rejected' | 'failed' | 'completed'): void {
         const runTransaction = this.db.transaction(() => {
             const txStmt = this.db.prepare(`
