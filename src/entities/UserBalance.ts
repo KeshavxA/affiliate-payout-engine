@@ -2,8 +2,8 @@
  * Represents the withdrawable balance of a user.
  */
 export interface UserBalance {
-    user_id: string;
-    withdrawable_balance: number;
-    last_withdrawal_at: Date | null;
-    updated_at: Date;
+    readonly user_id: string;
+    readonly withdrawable_balance: number;
+    readonly last_withdrawal_at: Date | null;
+    readonly updated_at: Date;
 }
