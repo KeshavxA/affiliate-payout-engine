@@ -9,6 +9,9 @@ import { WithdrawalCooldownError } from '../errors/WithdrawalCooldownError.js';
 export class WithdrawalService {
     constructor(private db: Database) {}
 
+    /**
+     * Requests a withdrawal of the specified amount for the given user, subject to rules.
+     */
     requestWithdrawal(userId: string, amount: number): void {
         const runTransaction = this.db.transaction(() => {
             // 1. Fetch balance and last_withdrawal_at
