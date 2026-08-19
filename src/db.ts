@@ -3,6 +3,9 @@ import type { Database } from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+/**
+ * The initialized better-sqlite3 database instance.
+ */
 export const db: Database = new DatabaseConstructor(process.env.DATABASE_URL || './payouts.db');
 
 /**
