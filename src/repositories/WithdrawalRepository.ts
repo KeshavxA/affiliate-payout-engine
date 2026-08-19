@@ -14,6 +14,9 @@ export class WithdrawalRepository {
         return this.db.prepare(`SELECT * FROM withdrawal_requests WHERE id = ?`).get(id) as WithdrawalRequest | undefined;
     }
 
+    /**
+     * Updates the status of a withdrawal request and records the settlement time.
+     */
     updateStatus(id: string, status: string): void {
         this.db.prepare(`UPDATE withdrawal_requests SET status = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?`).run(status, id);
     }
