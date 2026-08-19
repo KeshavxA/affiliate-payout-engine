@@ -5,7 +5,7 @@ import type { Sale } from '../entities/Sale.js';
  * Repository for managing Sale entities in the database.
  */
 export class SaleRepository {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Inserts a new Sale into the database.
