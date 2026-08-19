@@ -27,15 +27,9 @@ const reconciliationService = new ReconciliationService(db);
 const withdrawalService = new WithdrawalService(db);
 const recoveryService = new FailedPayoutRecoveryService(db);
 
-/**
- * Wrapper for async route handlers to pass exceptions to express error handler.
- */
 const asyncWrap = (fn: any) => (req: any, res: any, next: any) => Promise.resolve(fn(req, res, next)).catch(next);
 
-/**
- * POST /sales
- * Create a new sale for a user.
- */
+
 router.post('/sales', asyncWrap(async (req: any, res: any) => {
     const { userId, brand, earning } = req.body;
     if (!userId || !brand || earning == null) {
@@ -44,7 +38,7 @@ router.post('/sales', asyncWrap(async (req: any, res: any) => {
     if (Number(earning) <= 0) {
         throw new ValidationError("Earning must be greater than 0");
     }
-    
+
     const sale = {
         id: randomUUID(),
         user_id: userId,
@@ -61,20 +55,12 @@ router.post('/sales', asyncWrap(async (req: any, res: any) => {
     res.status(201).json(sale);
 }));
 
-/**
- * GET /sales?userId=&status=
- * Fetch sales, optionally filtered by user ID and/or status.
- */
 router.get('/sales', asyncWrap(async (req: any, res: any) => {
     const { userId, status } = req.query;
     const sales = saleRepo.find(userId as string, status as string);
     res.json(sales);
 }));
 
-/**
- * PATCH /sales/:id/reconcile
- * Reconcile a pending sale by approving or rejecting it.
- */
 router.patch('/sales/:id/reconcile', asyncWrap(async (req: any, res: any) => {
     const { status } = req.body;
     if (status !== 'approved' && status !== 'rejected') {
@@ -84,20 +70,12 @@ router.patch('/sales/:id/reconcile', asyncWrap(async (req: any, res: any) => {
     res.json({ message: `Sale ${req.params.id} reconciled as ${status}` });
 }));
 
-/**
- * POST /payouts/advance/run
- * Run the advance payout calculation for a user's pending sales.
- */
 router.post('/payouts/advance/run', asyncWrap(async (req: any, res: any) => {
     const { userId } = req.body;
     advanceService.runAdvancePayout(userId);
     res.json({ message: 'Advance payout processed successfully' });
 }));
 
-/**
- * GET /users/:id/balance
- * Fetch the withdrawable balance and last withdrawal time for a given user.
- */
 router.get('/users/:id/balance', asyncWrap(async (req: any, res: any) => {
     const balance = balanceRepo.findByUserId(req.params.id);
     if (!balance) {
@@ -106,10 +84,6 @@ router.get('/users/:id/balance', asyncWrap(async (req: any, res: any) => {
     res.json(balance);
 }));
 
-/**
- * POST /withdrawals
- * Request a withdrawal from the user's available balance.
- */
 router.post('/withdrawals', asyncWrap(async (req: any, res: any) => {
     const { userId, amount } = req.body;
     if (!userId || amount == null || Number(amount) <= 0) {
@@ -119,36 +93,24 @@ router.post('/withdrawals', asyncWrap(async (req: any, res: any) => {
     res.status(201).json({ message: 'Withdrawal requested successfully' });
 }));
 
-/**
- * PATCH /withdrawals/:id/status
- * Update the status of a withdrawal request.
- */
 router.patch('/withdrawals/:id/status', asyncWrap(async (req: any, res: any) => {
     const { status, transactionId } = req.body;
-    
-    // First update the withdrawal request
+
     withdrawalRepo.updateStatus(req.params.id, status);
 
-    // Then trigger recovery if transactionId is provided (as per spec)
     if (transactionId) {
         recoveryService.markPayoutOutcome(transactionId, status);
     }
-    
+
     res.json({ message: 'Withdrawal status updated' });
 }));
 
-/**
- * GET /users/:id/transactions
- * Fetch all payout transactions for a given user.
- */
+
 router.get('/users/:id/transactions', asyncWrap(async (req: any, res: any) => {
     const txs = txRepo.findByUserId(req.params.id);
     res.json(txs);
 }));
 
-/**
- * Generic error handler for all routes.
- */
 router.use((err: any, req: any, res: any, next: any): void => {
     if (err instanceof ValidationError || err instanceof InsufficientBalanceError) {
         return res.status(400).json({ error: err.message });
@@ -159,6 +121,5 @@ router.use((err: any, req: any, res: any, next: any): void => {
     if (err instanceof ConflictError || err instanceof WithdrawalCooldownError) {
         return res.status(409).json({ error: err.message });
     }
-    // Fallback for unexpected errors
     res.status(500).json({ error: err.message });
 });
