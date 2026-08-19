@@ -5,7 +5,7 @@ import type { PayoutTransaction } from '../entities/PayoutTransaction.js';
  * Repository for accessing PayoutTransaction entities.
  */
 export class PayoutTransactionRepository {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Retrieves all payout transactions for a given user.
