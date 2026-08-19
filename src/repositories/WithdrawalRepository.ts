@@ -7,6 +7,9 @@ import type { WithdrawalRequest } from '../entities/WithdrawalRequest.js';
 export class WithdrawalRepository {
     constructor(private db: Database) {}
 
+    /**
+     * Retrieves a withdrawal request by its ID.
+     */
     findById(id: string): WithdrawalRequest | undefined {
         return this.db.prepare(`SELECT * FROM withdrawal_requests WHERE id = ?`).get(id) as WithdrawalRequest | undefined;
     }
