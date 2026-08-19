@@ -25,6 +25,9 @@ export class SaleRepository {
         );
     }
 
+    /**
+     * Finds sales based on user ID and optional status.
+     */
     find(userId?: string, status?: string): Sale[] {
         let query = 'SELECT * FROM sales WHERE 1=1';
         const params: any[] = [];
