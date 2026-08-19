@@ -7,6 +7,9 @@ import type { Sale } from '../entities/Sale.js';
 export class SaleRepository {
     constructor(private db: Database) {}
 
+    /**
+     * Inserts a new Sale into the database.
+     */
     create(sale: Sale): void {
         const stmt = this.db.prepare(`
             INSERT INTO sales (id, user_id, brand, earning, status, advance_paid, advance_paid_at, reconciled_at, created_at, updated_at)
