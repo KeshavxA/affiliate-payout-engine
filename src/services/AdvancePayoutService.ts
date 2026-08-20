@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
  * Service to manage calculation and distribution of advance payouts.
  */
 export class AdvancePayoutService {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Calculates and distributes advance payouts for all eligible pending sales of a user.
