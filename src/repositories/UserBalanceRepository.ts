@@ -5,7 +5,7 @@ import type { UserBalance } from '../entities/UserBalance.js';
  * Repository for accessing user balances.
  */
 export class UserBalanceRepository {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Retrieves the balance for a given user.
