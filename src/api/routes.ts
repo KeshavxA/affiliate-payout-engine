@@ -72,6 +72,10 @@ router.get('/sales', asyncWrap(async (req: any, res: any) => {
     res.json(sales);
 }));
 
+/**
+ * PATCH /sales/:id/reconcile
+ * Reconcile a pending sale by approving or rejecting it.
+ */
 router.patch('/sales/:id/reconcile', asyncWrap(async (req: any, res: any) => {
     const { status } = req.body;
     if (status !== 'approved' && status !== 'rejected') {
