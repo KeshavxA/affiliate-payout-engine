@@ -62,6 +62,10 @@ router.post('/sales', asyncWrap(async (req: any, res: any) => {
     res.status(201).json(sale);
 }));
 
+/**
+ * GET /sales?userId=&status=
+ * Fetch sales, optionally filtered by user ID and/or status.
+ */
 router.get('/sales', asyncWrap(async (req: any, res: any) => {
     const { userId, status } = req.query;
     const sales = saleRepo.find(userId as string, status as string);
