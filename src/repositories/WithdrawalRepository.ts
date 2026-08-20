@@ -5,7 +5,7 @@ import type { WithdrawalRequest } from '../entities/WithdrawalRequest.js';
  * Repository for managing WithdrawalRequest entities.
  */
 export class WithdrawalRepository {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Retrieves a withdrawal request by its ID.
