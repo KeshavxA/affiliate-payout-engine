@@ -6,7 +6,7 @@ import { ConflictError } from '../errors/ConflictError.js';
  * Service to manage the recovery of failed payouts.
  */
 export class FailedPayoutRecoveryService {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Marks a payout transaction with its final outcome and handles any necessary refunds.
