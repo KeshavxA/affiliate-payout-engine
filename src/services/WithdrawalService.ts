@@ -7,7 +7,7 @@ import { WithdrawalCooldownError } from '../errors/WithdrawalCooldownError.js';
  * Service to manage the requesting of withdrawals.
  */
 export class WithdrawalService {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Requests a withdrawal of the specified amount for the given user, subject to rules.
