@@ -7,7 +7,7 @@ import { ConflictError } from '../errors/ConflictError.js';
  * Service to manage reconciliation of sales (approving or rejecting).
  */
 export class ReconciliationService {
-    constructor(private db: Database) {}
+    constructor(private readonly db: Database) {}
 
     /**
      * Reconciles a pending sale by approving or rejecting it and adjusting balances accordingly.
