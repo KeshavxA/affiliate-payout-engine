@@ -27,6 +27,9 @@ const reconciliationService = new ReconciliationService(db);
 const withdrawalService = new WithdrawalService(db);
 const recoveryService = new FailedPayoutRecoveryService(db);
 
+/**
+ * Wrapper for async route handlers to pass exceptions to express error handler.
+ */
 const asyncWrap = (fn: any) => (req: any, res: any, next: any) => Promise.resolve(fn(req, res, next)).catch(next);
 
 
