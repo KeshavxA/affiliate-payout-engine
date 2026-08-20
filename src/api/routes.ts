@@ -85,6 +85,10 @@ router.patch('/sales/:id/reconcile', asyncWrap(async (req: any, res: any) => {
     res.json({ message: `Sale ${req.params.id} reconciled as ${status}` });
 }));
 
+/**
+ * POST /payouts/advance/run
+ * Run the advance payout calculation for a user's pending sales.
+ */
 router.post('/payouts/advance/run', asyncWrap(async (req: any, res: any) => {
     const { userId } = req.body;
     advanceService.runAdvancePayout(userId);
