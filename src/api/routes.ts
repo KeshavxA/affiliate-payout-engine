@@ -15,6 +15,9 @@ import { ValidationError } from '../errors/ValidationError.js';
 import { InsufficientBalanceError } from '../errors/InsufficientBalanceError.js';
 import { WithdrawalCooldownError } from '../errors/WithdrawalCooldownError.js';
 
+/**
+ * Main Express router for the payout management API.
+ */
 export const router = Router();
 
 const saleRepo = new SaleRepository(db);
