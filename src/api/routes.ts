@@ -120,6 +120,10 @@ router.post('/withdrawals', asyncWrap(async (req: any, res: any) => {
     res.status(201).json({ message: 'Withdrawal requested successfully' });
 }));
 
+/**
+ * PATCH /withdrawals/:id/status
+ * Update the status of a withdrawal request.
+ */
 router.patch('/withdrawals/:id/status', asyncWrap(async (req: any, res: any) => {
     const { status, transactionId } = req.body;
 
