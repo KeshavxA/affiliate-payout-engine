@@ -149,6 +149,9 @@ router.get('/users/:id/transactions', asyncWrap(async (req: any, res: any) => {
     res.json(txs);
 }));
 
+/**
+ * Generic error handler for all routes.
+ */
 router.use((err: any, req: any, res: any, next: any): void => {
     if (err instanceof ValidationError || err instanceof InsufficientBalanceError) {
         return res.status(400).json({ error: err.message });
