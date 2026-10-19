@@ -20,4 +20,11 @@ export class WithdrawalRepository {
     updateStatus(id: string, status: string): void {
         this.db.prepare(`UPDATE withdrawal_requests SET status = ?, settled_at = CURRENT_TIMESTAMP WHERE id = ?`).run(status, id);
     }
+
+    /**
+     * Retrieves all withdrawal requests for a given user, ordered by most recent first.
+     */
+    findByUserId(userId: string): WithdrawalRequest[] {
+        return this.db.prepare(`SELECT * FROM withdrawal_requests WHERE user_id = ? ORDER BY requested_at DESC`).all(userId) as WithdrawalRequest[];
+    }
 }
