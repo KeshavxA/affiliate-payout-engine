@@ -26,6 +26,13 @@ export class SaleRepository {
     }
 
     /**
+     * Retrieves a single Sale by its unique identifier.
+     */
+    findById(id: string): Sale | undefined {
+        return this.db.prepare(`SELECT * FROM sales WHERE id = ?`).get(id) as Sale | undefined;
+    }
+
+    /**
      * Finds sales based on user ID and optional status.
      */
     find(userId?: string, status?: string): Sale[] {
