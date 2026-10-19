@@ -150,6 +150,15 @@ router.get('/users/:id/transactions', asyncWrap(async (req: any, res: any) => {
 }));
 
 /**
+ * GET /users/:id/withdrawals
+ * Fetch all withdrawal requests for a given user.
+ */
+router.get('/users/:id/withdrawals', asyncWrap(async (req: any, res: any) => {
+    const withdrawals = withdrawalRepo.findByUserId(req.params.id);
+    res.json(withdrawals);
+}));
+
+/**
  * Generic error handler for all routes.
  */
 router.use((err: any, req: any, res: any, next: any): void => {
